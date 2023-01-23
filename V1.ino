@@ -43,10 +43,7 @@ int hour;
 int minute;
 int second;
 float timeZone;
-bool isCalculated = false;
-bool isPrinted = false;
 
-bool isActivated = false;
 
 
 void setup() {
@@ -61,20 +58,23 @@ myRTC.begin();
   pinMode(motor2B, OUTPUT);
   pinMode(motor3A, OUTPUT);
   pinMode(motor3B, OUTPUT);
+
+
+
+
+
+
 }
 
 void loop() {
-  DateTime now = myRTC.now();
-//if (now.hour() == 5 && now.minute() == 45 && now.second() == 0 && !isCalculated) {
+
+DateTime now = myRTC.now();
 // It's exactly midnight, calculate the sun's position
 int minutesSinceMidnight = now.hour() * 60 + now.minute();
  // COMPROBAR CON https://www.suncalc.org/#/38.0477,-1.1953,13/2023.01.12/08:18/1/0
 SunPosition sun(38.05, -1.24, now.unixtime());
-isCalculated = true;
-//}
 
-if (now.hour() == 5 && now.minute() == 45 && now.second() == 10 && !isPrinted) {
-// It's exactly 00:05:10, print the sun's position
+
 Serial.print("MIDDAY ZENITH - ");
 Serial.println(sun.zenith());
 Serial.print("ALTITUDE - ");
@@ -87,85 +87,103 @@ Serial.print("SUNSET - ");
 Serial.println(sun.sunset());
 Serial.print("Minutes passed since midnight : ");
 Serial.println(minutesSinceMidnight);
-isPrinted = true;
 
-}
-if (minutesSinceMidnight == sun.sunrise()  && !isActivated) {
-  // Deschidem Clapanu 1
-digitalWrite(motor1A, LOW);
-    digitalWrite(motor1B, HIGH);
-    delay(3000);
-    Serial.println("Clapan 1 deschis ");
+   // Check if the current time is 5 minutes before the calculated sunrise time
+    if (minutesSinceMidnight == sun.sunrise() - 5) {
+        // Start motor 1 in backward direction for 5 seconds
+        digitalWrite(motor1A, HIGH);
+        digitalWrite(motor1B, LOW);
+        delay(5000);
+        Serial.println("LOCK1 closed");
+        // Stop motor 1
+        digitalWrite(motor1A, LOW);
+        digitalWrite(motor1B, LOW);
+        delay(2000);
 
-    // Inchidem Clapanu 2
-    digitalWrite(motor2A, HIGH);
-        delay(3000);
-    digitalWrite(motor2B, LOW);
-    Serial.println("Clapan 2 inchis ");
-    isActivated = true;
-    Serial.println("System wake up ");
+        // Start motor 2 in forward direction for 5 seconds
+        digitalWrite(motor2A, LOW);
+        digitalWrite(motor2B, HIGH);
+        delay(5000);
+        Serial.println("LOCK2 opened");
+        // Stop motor 2
+        digitalWrite(motor2A, LOW);
+        digitalWrite(motor2B, LOW);
+        delay(2000);
 
-    // MOTORU · SUS
-    digitalWrite(motor3A, HIGH);
-    delay(30000); // wait for 30 seconds
-    digitalWrite(motor3B, LOW);
-    Serial.println("motoru 3 SUS  ");
-}
-if (minutesSinceMidnight >= sun.sunrise() && minutesSinceMidnight < sun.noon()) {
-    if ((minutesSinceMidnight - sun.sunrise()) % 10 == 0) {
+        // Start motor 3 in forward direction for 30 seconds
         digitalWrite(motor3A, LOW);
-        digitalWrite(motor3B, HIGH); //MOTOR 3 SE COBOARA JOS FIECARE 10 MIN PENTR O SECUNDA
-                delay(1000);
-
-                      Serial.println("Down by 2 degree ");
-
-    }
-    if (minutesSinceMidnight == sun.noon()) {
+        digitalWrite(motor3B, HIGH);
+        delay(30000);
+        // Stop motor 3
         digitalWrite(motor3A, LOW);
         digitalWrite(motor3B, LOW);
-            Serial.println("System is at base");
-
-   // Deschidem Clapanu 2
-digitalWrite(motor2A, LOW);
-    digitalWrite(motor2B, HIGH);
-        delay(3000);
-    Serial.println("Clapan 2 DESCHIS ");
-              // Inchidem Clapanu 1
-digitalWrite(motor1A, HIGH);
-        delay(3000);
-    digitalWrite(motor1B, LOW);
-    Serial.println("Clapan 1 INCHIS ");
-
+        Serial.println("System is UP");
     }
-}
-
-if (minutesSinceMidnight > sun.noon() && minutesSinceMidnight < sun.sunset()) {
-    if ((minutesSinceMidnight - sun.sunrise()) % 10 == 0) {
+    
+    if (minutesSinceMidnight >= sun.sunrise() && minutesSinceMidnight < sun.noon()) {
+        if (minutesSinceMidnight % 10 == 0) {
+            // Start motor 3 in backward direction for 3 seconds
         digitalWrite(motor3A, HIGH);
-            delay(1000);
-        digitalWrite(motor3B, LOW);
-       Serial.println("Up by 2 degree ");
+       digitalWrite(motor3B, LOW);
+       delay(3000);
+       Serial.println("DOWN BY 2 DEGREES");
+
+            // Stop motor 3
+       digitalWrite(motor3A, LOW);
+       digitalWrite(motor3B, LOW);
+        }
+    }
+
+
+    if (minutesSinceMidnight >= sun.noon() && minutesSinceMidnight < sun.sunset()) {
+        if (minutesSinceMidnight == sun.noon() ) {
+
+              // Stop motor 3
+            Serial.println("minutesSinceMidnight is equal to sun.noon");
+
+            digitalWrite(motor3A, LOW);
+            digitalWrite(motor3B, LOW);
+            // Start motor 1 in backward direction for 5 seconds
+            digitalWrite(motor1A, HIGH);
+            digitalWrite(motor1B, LOW);
+            delay(5000);
+                    Serial.println("LOCK1 OPENED");
+
+            // Stop motor 1
+            digitalWrite(motor1A, LOW);
+            digitalWrite(motor1B, LOW);
+            Serial.println("motor 1 is stopped");
+
+            // Start motor 2 in forward direction for 5 seconds
+            digitalWrite(motor2A, LOW);
+            digitalWrite(motor2B, HIGH);
+            delay(5000);
+            Serial.println("LOCK2 CLOSED");
+
+            // Stop motor 2
+            digitalWrite(motor2A, LOW);
+            digitalWrite(motor2B, LOW);
+            Serial.println("motor 2 is stopped");
+        }
+
+if (minutesSinceMidnight % 10 == 0) {
+    // Start motor 3 in forward direction for 3 seconds
+            digitalWrite(motor3A, LOW);
+            digitalWrite(motor3B, HIGH);
+            delay(3000);
+            // Stop motor 3
+            digitalWrite(motor3A, LOW);
+            digitalWrite(motor3B, LOW);
+            Serial.println("motor 3 is stopped");
+        }
+    }
+
+ if (minutesSinceMidnight == sun.sunset()){
+// Stop motor 3
+    digitalWrite(motor3A, LOW);
+    digitalWrite(motor3B, LOW);
+     delay(3000);
 
     }
-    if (minutesSinceMidnight == sun.sunset()) {
-        digitalWrite(motor3A, LOW);
-        digitalWrite(motor3B, LOW);
-            Serial.println("System is at pick");
-
-   // MOTORU 3 · JOS
-    digitalWrite(motor3A, LOW);
-    digitalWrite(motor3B, HIGH);
-        delay(30000); // wait for 30 seconds
-    Serial.println("motoru 3 JOS  ");
-
-
-              // inchidem Clapanu 2
-digitalWrite(motor2A, HIGH);
-    digitalWrite(motor2B, LOW);
-    Serial.println("Clapan 2 DESCHIS ");
-    isActivated = true;
-
-}
-}
 
 }
